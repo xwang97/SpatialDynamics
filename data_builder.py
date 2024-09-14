@@ -1,6 +1,7 @@
 import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 import numpy as np
+from scipy import stats
 
 def read_trans(filename):
     transcripts = pd.read_csv(filename)
@@ -98,7 +99,7 @@ class TimeSeriesBuilder:
                 j = int(d / stride)
                 self.cell_features[id][j] += 1
     
-    def cal_probs3(self, alpha=2):
+    def cal_probs(self, alpha=2):
         """
         This function computes transition probabilities from each cell to its neighbors.
         Input:
@@ -118,4 +119,108 @@ class TimeSeriesBuilder:
             probs = np.exp(-alpha * ks_dists)
             probs /= np.sum(probs)
             self.cell_probs[id] = probs
+
+    def walk(self, start, length, dim_features):
+        """
+        Start at a cell and generate a path by random walk
+        Input:
+            start: cell_id of the start cell
+            length: length of the series
+            dim_features: dimension of feature vectors
+        Output:
+            series: a length*di_features matrix, each row is the fetures of a local pseudo-time step
+            selected_ids: a vector, each element is a cell_id of this series
+        """
+        series = np.zeros((length, dim_features), dtype=float)
+        selected_ids = np.zeros(length)
+        id = start
+        for i in range(length):
+            series[i] = self.cell_features[id] # save the features
+            selected_ids[i] = id               # save the cell_id
+            nbrs = self.cell_neighbors[id]     # find the neighbors of the current cell
+            probs = self.cell_probs[id]        # find the corresponding probs
+            next_index = np.random.choice(len(probs), p=probs) # select the next cell based on the probs
+            next_cell_id = nbrs[next_index]
+            id = next_cell_id             # jump to the next cell
+        return series, selected_ids
+    
+    def build_dataset_base(self, num_samples, seq_len=20):
+        """
+        Build a dataset by random walk
+        Input:
+            num_samples: number of samples in the dataset
+            seq_len: length of each series
+        Output:
+            data: num_samples * (seq_len * dim_features) matrix, each row is the flattened features of a local series
+            locations: the locations of each start cell
+            cell_ids: num_samples * seq_len matrix, each row is the cell_ids of a local series
+        """
+        data = []
+        locations = []
+        cell_ids = []  # save the cell ids of each path
+        # all_ids = np.unique(transcripts['cell_id'])
+        all_ids = np.array(list(self.cell_dists.keys()))
+        num_ids = all_ids.shape[0]
+        dim_features = self.cell_features[all_ids[0]].shape[0]
+        for i in range(num_samples):
+            rand_index = np.random.randint(num_ids)
+            while len(self.cell_neighbors[all_ids[rand_index]]) <= 1:
+                rand_index = np.random.randint(num_ids)
+            start = all_ids[rand_index]
+            sample, selected_ids = self.walk(start, seq_len, dim_features)
+            data.append(sample.flatten())
+            locations.append(self.cell_centers[start])
+            cell_ids.append(selected_ids)
+            if i % 1000 == 0:
+                print(i)
+        return np.array(data), np.array(locations), np.array(cell_ids)
+    
+    def build_dataset_refer(self, cell_ids):
+        """
+        Build a dataset for a gene based on a reference gene. If we have already built a dataset for some gene,
+        we must have saved the cell_ids of each series of each sample. We will use these well-built series to build
+        a dataset for a new gene.
+        """
+        data = []
+        locations = []
+        reference_index = []
+        all_ids = np.array(list(self.cell_dists.keys()))
+        dim_features = self.cell_features[all_ids[0]].shape[0]
+        num_samples = cell_ids.shape[0]
+        seq_len = cell_ids.shape[1]
+        for i in range(num_samples):
+            series = np.zeros((seq_len, dim_features), dtype=float)
+            save = 1
+            if cell_ids[i, 0] not in all_ids:
+                save = 0
+            else:
+                for j in range(seq_len):
+                    if cell_ids[i ,j] in all_ids:
+                        series[j] = self.cell_features[cell_ids[i, j]]
+                    else:
+                        continue
+            if save:
+                data.append(series.flatten())
+                locations.append(self.cell_centers[cell_ids[i, 0]])
+                reference_index.append(i)
+        return np.array(data), np.array(locations), np.array(reference_index)
+    
+    def run(self, num_samples, gene, method='base', reference_ids = None):
+        """
+        RUn the functions above, and save the time series samples.
+        """
+        self.build_dict()
+        self.find_neighbors()
+        self.build_features()
+        self.cal_probs()
+        if method == 'base':
+            data, locations, cell_ids = self.build_dataset_base(num_samples)
+            np.savetxt(gene+'_data.csv', data, delimiter=',')
+            np.savetxt(gene+'_locs.csv', locations, delimiter=',')
+            np.savetxt(gene+'GATA3_ids.csv', cell_ids, delimiter=',')
+        else:
+            data, locations, reference_index = self.build_dataset_refer(reference_ids)
+            np.savetxt(gene+'_data.csv', data, delimiter=',')
+            np.savetxt(gene+'_locs.csv', locations, delimiter=',')
+            np.savetxt(gene+'_reference.csv', reference_index, delimiter=',')
 
