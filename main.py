@@ -2,12 +2,29 @@ import torch
 import torch.nn as nn
 from models import Model, smoothness_loss
 import math
-from utils import MyDataset
+from utils import MyDataset, read_data
 from torch.utils.data import DataLoader
+import random
+import numpy as np
+import argparse
+import os
 
 
+# Set random seed
+seed = 0
+random.seed(seed)
+np.random.seed(seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+torch.manual_seed(seed)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+# Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# Set parameters
 SEQ_LEN = 20
 dim_inputs = 10
 hidden_size = 100
@@ -71,3 +88,20 @@ def test(sample, loc, net):
     loc = torch.from_numpy(loc).float().to(device)
     prediction, generation, trans_status, _, _ = net(sample, loc)
     return prediction, generation, trans_status
+
+
+if __name__ == '__main__':
+    # load parameters from command line
+    parser = argparse.ArgumentParser(description='Training starts')
+    parser.add_argument('-data_path', type=str, help='filename for loading sequencing data')
+    parser.add_argument('-locs_path', type=str, help='filename for loading cell locations')
+    parser.add_argument('-save_model_path', type=str, default='../model_params', help='folder to save the trained model')
+    args = parser.parse_args()
+    # data loading and training
+    data, locs = read_data(args.data_path, args.locs_path)
+    train_data = data
+    train_locs = locs
+    net = train(train_data, train_locs, batch_size, base_lr, lr_step, num_epochs)
+    # save the trained model
+    gene = os.path.basename(args.data_path).split('_')[0]
+    torch.save(net.state_dict(), args.save_model_path + gene + '_model.pth')
