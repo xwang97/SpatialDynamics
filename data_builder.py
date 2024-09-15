@@ -96,7 +96,8 @@ class TimeSeriesBuilder:
             cell_features: a dictionary, keys: cell_id, values: feature vector of the cell, which is the molecule counts at each distance
         """
         print("Build cell feature vectors")
-        num_strides = int(np.floor(max(self.transcripts['distance'])) / stride) + 1
+        # num_strides = int(np.floor(max(self.transcripts['distance'])) / stride) + 1
+        num_strides = 10
         for id, dists in self.cell_dists.items():
             self.cell_features[id] = np.zeros(num_strides)
             for d in dists:
