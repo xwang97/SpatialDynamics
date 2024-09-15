@@ -2,6 +2,7 @@ import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 import numpy as np
 from scipy import stats
+from tqdm import tqdm
 
 def read_trans(filename):
     transcripts = pd.read_csv(filename)
@@ -53,6 +54,7 @@ class TimeSeriesBuilder:
             cell_dists: dict, key is cell_id, value is a list of molecule distances in this cell
             cell_centers: dict, key is cell_id, value is a list of molecule coordinates
         """
+        print("Building cell dictionaries")
         for index, row in self.transcripts.iterrows():
             if row['cell_id'] not in self.cell_dists:
                 self.cell_dists[row['cell_id']] = [row['distance']]
@@ -73,7 +75,8 @@ class TimeSeriesBuilder:
             k_nearest_neighbors: a dictionary, keys are cell_ids of each cell, values are the cell_ids 
             of that cell's neighbors
         """
-        coordinates_to_ids = {tuple(coord): cell_id for cell_id, coord in self.cells_centers.items()}
+        print("Find spatial neighbors")
+        coordinates_to_ids = {tuple(coord): cell_id for cell_id, coord in self.cell_centers.items()}
         cell_coordinates = np.array(list(self.cell_centers.values()))
         nbrs = NearestNeighbors(n_neighbors=k_neighbors+1, algorithm='auto').fit(cell_coordinates)
         distances, indices = nbrs.kneighbors(cell_coordinates)
@@ -92,6 +95,7 @@ class TimeSeriesBuilder:
         Output:
             cell_features: a dictionary, keys: cell_id, values: feature vector of the cell, which is the molecule counts at each distance
         """
+        print("Build cell feature vectors")
         num_strides = int(np.floor(max(self.transcripts['distance'])) / stride) + 1
         for id, dists in self.cell_dists.items():
             self.cell_features[id] = np.zeros(num_strides)
@@ -108,6 +112,7 @@ class TimeSeriesBuilder:
         Output:
             cell_probs: a dictionary, key: cell_id, value: probabilities of transiting to each neighbor
         """
+        print("Calculate random walk transition probabilities")
         for id, neighbors in self.cell_neighbors.items():
             num_nbrs = len(neighbors)
             ks_dists = np.zeros(num_nbrs)
@@ -155,6 +160,7 @@ class TimeSeriesBuilder:
             locations: the locations of each start cell
             cell_ids: num_samples * seq_len matrix, each row is the cell_ids of a local series
         """
+        print("Start building the dataset")
         data = []
         locations = []
         cell_ids = []  # save the cell ids of each path
@@ -162,7 +168,7 @@ class TimeSeriesBuilder:
         all_ids = np.array(list(self.cell_dists.keys()))
         num_ids = all_ids.shape[0]
         dim_features = self.cell_features[all_ids[0]].shape[0]
-        for i in range(num_samples):
+        for i in tqdm(range(num_samples)):
             rand_index = np.random.randint(num_ids)
             while len(self.cell_neighbors[all_ids[rand_index]]) <= 1:
                 rand_index = np.random.randint(num_ids)
@@ -171,8 +177,8 @@ class TimeSeriesBuilder:
             data.append(sample.flatten())
             locations.append(self.cell_centers[start])
             cell_ids.append(selected_ids)
-            if i % 1000 == 0:
-                print(i)
+            # if i % 1000 == 0:
+            #     print(i)
         return np.array(data), np.array(locations), np.array(cell_ids)
     
     def build_dataset_refer(self, cell_ids):
@@ -205,7 +211,7 @@ class TimeSeriesBuilder:
                 reference_index.append(i)
         return np.array(data), np.array(locations), np.array(reference_index)
     
-    def run(self, num_samples, gene, method='base', reference_ids = None):
+    def run(self, num_samples, save_path, gene, method='base', reference_ids = None):
         """
         RUn the functions above, and save the time series samples.
         """
@@ -215,12 +221,13 @@ class TimeSeriesBuilder:
         self.cal_probs()
         if method == 'base':
             data, locations, cell_ids = self.build_dataset_base(num_samples)
-            np.savetxt(gene+'_data.csv', data, delimiter=',')
-            np.savetxt(gene+'_locs.csv', locations, delimiter=',')
-            np.savetxt(gene+'GATA3_ids.csv', cell_ids, delimiter=',')
+            np.savetxt(save_path+gene+'_data.csv', data, delimiter=',')
+            np.savetxt(save_path+gene+'_locs.csv', locations, delimiter=',')
+            np.savetxt(save_path+gene+'_ids.csv', cell_ids, delimiter=',')
         else:
             data, locations, reference_index = self.build_dataset_refer(reference_ids)
-            np.savetxt(gene+'_data.csv', data, delimiter=',')
-            np.savetxt(gene+'_locs.csv', locations, delimiter=',')
-            np.savetxt(gene+'_reference.csv', reference_index, delimiter=',')
+            np.savetxt(save_path+gene+'_data.csv', data, delimiter=',')
+            np.savetxt(save_path+gene+'_locs.csv', locations, delimiter=',')
+            np.savetxt(save_path+gene+'_reference.csv', reference_index, delimiter=',')
+        print(f"{num_samples} time-series samples generated")
 
