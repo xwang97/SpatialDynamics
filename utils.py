@@ -44,6 +44,30 @@ def visualize(gt, pre):
     plt.show()
     return
 
+def save_and_plot_simu(gt, pre, filename, switch='rate'):
+    """
+    Save the prediction results on simulated data to csv files for further plotting
+    in R, and show the plots by python in jupyter notebook. 
+    """
+    # Create a DataFrame to hold time, ground truth, and prediction
+    df = pd.DataFrame({
+        'Time': range(len(gt)-1),
+        'Ground_Truth': gt[:-1],
+        'Prediction': pre
+    })
+    # Save the DataFrame as a CSV file
+    df.to_csv(f'{filename}.csv', index=False)
+
+    plt.plot(gt, c=(178/255, 60/255, 60/255, 255/255))
+    plt.plot(pre, c=(111/255, 167/255, 182/255, 255/255))
+    plt.xlabel('Time')
+    if switch == 'rate':
+        plt.ylabel('Rate')
+    else:
+        plt.ylabel('On/off status')
+    plt.show()
+    return
+
 
 def set_seed(seed):
     torch.manual_seed(seed)

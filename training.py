@@ -40,11 +40,12 @@ def train(data, locs, batch_size, base_lr, lr_step, num_epochs, hidden_size, lat
             loss_recon = mse(data[:, 1:, 0], prediction[:, :, 0])*weights[0]
             for dim in range(1, feature_dim):
                 loss_recon += mse(data[:, 1:, dim], prediction[:, :, dim])*weights[dim]
+            # loss_recon /= feature_dim
             loss_var = mse(totals_pre[:, 1:], totals_post[:, :-1])
-            loss_status = torch.mean(torch.sum(trans_status, dim=1))
-            loss_smooth = smoothness_loss(generation)
+            loss_status = torch.mean(trans_status)
+            loss_smooth = smoothness_loss(generation) + smoothness_loss(trans_status)
 
-            loss = loss_recon + 0.2*loss_smooth    # best for simulation
+            loss = loss_recon + 0.4*loss_smooth + 0.2*loss_status    # best for simulation
 
             recon += loss_recon.cpu()
             variation += loss_var.cpu()
@@ -58,7 +59,7 @@ def train(data, locs, batch_size, base_lr, lr_step, num_epochs, hidden_size, lat
         variation /= len(data_loader)
         status /= len(data_loader)
         smooth /= len(data_loader)
-        print(f'Epoch [{epoch+1}/{num_epochs}], Loss1: {recon.item():.4f}, Loss2: {variation.item():.4f}, Loss3: {smooth.item():.4f}')
+        print(f'Epoch [{epoch+1}/{num_epochs}], Loss1: {recon.item():.4f}, Loss2: {status.item():.4f}, Loss3: {smooth.item():.4f}')
     return net
 
 

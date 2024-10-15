@@ -12,7 +12,7 @@ class BinaryThreshold(torch.autograd.Function):
     Used to generate the transcription on-off states
     """
     @staticmethod
-    def forward(ctx, input_tensor, threshold=0):
+    def forward(ctx, input_tensor, threshold=0.5):
         ctx.save_for_backward(input_tensor)
         return torch.where(input_tensor > threshold, torch.tensor(1.0), torch.tensor(0.0))
 
@@ -91,7 +91,7 @@ class Model(nn.Module):
         central = torch.zeros((z.size()[0], self.dim_inputs), requires_grad=False)
         central[:, 0] += 1
         central = central.to(device)
-        on_off = BinaryThreshold.apply(self.on(switch)) # the transcription on-off state
+        on_off = BinaryThreshold.apply(torch.sigmoid(self.on(switch))) # the transcription on-off state
         state += generate * central * on_off            # at the cell center, on state will generate new molecules
         totals_post = torch.sum(state, 1)
         return state, generate, on_off, totals_pre, totals_post
