@@ -14,7 +14,7 @@ class BinaryThreshold(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input_tensor, threshold=0.5):
         ctx.save_for_backward(input_tensor)
-        return torch.where(input_tensor > threshold, torch.tensor(1.0), torch.tensor(0.0))
+        return torch.where(input_tensor > threshold, torch.tensor(1.0, device=device), torch.tensor(0.0, device=device))
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -32,6 +32,7 @@ def smoothness_loss(output):
     """
     # Compute squared differences between adjacent elements along the time dimension
     squared_diff = torch.pow(output[:, :-1] - output[:, 1:], 2)
+    # squared_diff = torch.abs(output[:, :-1] - output[:, 1:])
     # Compute mean of squared differences
     smoothness_loss = torch.mean(squared_diff)
     return smoothness_loss

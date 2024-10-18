@@ -53,13 +53,14 @@ def save_and_plot_simu(gt, pre, filename, switch='rate'):
     df = pd.DataFrame({
         'Time': range(len(gt)-1),
         'Ground_Truth': gt[:-1],
-        'Prediction': pre
     })
+    pre_df = pd.DataFrame(pre.T, columns=[f'sample_{i}' for i in range(pre.shape[0])])
+    df = pd.concat([df, pre_df], axis=1)
     # Save the DataFrame as a CSV file
     df.to_csv(f'{filename}.csv', index=False)
 
     plt.plot(gt, c=(178/255, 60/255, 60/255, 255/255))
-    plt.plot(pre, c=(111/255, 167/255, 182/255, 255/255))
+    plt.plot(pre[1], c=(111/255, 167/255, 182/255, 255/255))
     plt.xlabel('Time')
     if switch == 'rate':
         plt.ylabel('Rate')
