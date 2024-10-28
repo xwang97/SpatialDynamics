@@ -1,17 +1,13 @@
-# SpatialDynamics
-
-## Structures
-
-### Functional scripts
-
-| **Filename**          | **Description**                                                                 |
-|-----------------------|---------------------------------------------------------------------------------|
-| **models.py**         | Definition of the main model, with some dependent classes and loss functions.    |
-| **main.py**           | Definition of train and test functions; call functions for data loading, train, and test. |
-| **data_builder.py**   | The TimeSeriesBuilder class, which builds pseudo time-series samples based on neighborhood information. |
-
-### Analysis
-
-| **Filename**       | **Description**                                                                 |
-|--------------------|---------------------------------------------------------------------------------|
-| **burst.ipynb**    | Analysis of transcription burst.                                                |
+SpatialDynamics
+├── Burst	# analysis of transcription burst
+│   └── burst.ipynb
+├── data_builder.py
+├── main.py	# definition of model training in command line
+├── models.py	# definition of the SPADE model, with some dependent classes and loss functions.
+├── plotting.R	# plotting functions in R
+├── README.md
+├── Simulation	# simulation experiments
+│   ├── run_simu.ipynb	# run experiments on simulated data
+│   └── simulate.ipynb	# a cell simulator for molecule drift-diffusion
+├── training.py		# definition of train and test functions
+└── utils.py
