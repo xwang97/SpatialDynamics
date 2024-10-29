@@ -33,9 +33,9 @@ This section introduces how to generate simulated data with the Cell simulator, 
 
 ### 1. Generate simulated datasets
 
-There is an example at the end of the jupyter notebook Simulation/simulate.ipynb. Here we introduce this process in more details.
+There is an example at the end of [this notebook](Simulation/simulate.ipynb). Here we introduce this process in more details.
 
-Firstly we need to set the parameters of the cell (a cell is modeled as a sphere, so we need to set the center coordinates and radius) and the molecule movements (drift and diffusion components).
+Firstly we need to set the parameters of the cell (a cell is modeled as a sphere, so we need to set the `center` coordinates and `radius`) and the molecule movements (drift and diffusion components).
 
 ```python
 # set the hyper-parameters
@@ -46,7 +46,7 @@ velocity = 0.1
 brownian = 0.05
 ```
 
-To model the transcription process, we need to set the time steps when new molecules are generated, which is achieved by the scheduler function. Here the resolution has been set to 0.1 in the previous step, and the total time T is set to 20, so we will have 200 time steps. We can then set the transcription rates at different phases within the 200 time steps. The scheduler function will use these rates as input, and return the time steps when the transcription happens by a Poisson process model.
+To model the transcription process, we need to set the time steps when new molecules are generated, which is achieved by the [scheduler](Simulation/simulator.py#L11-L29) function. Here the `resolution` has been set to 0.1 in the previous step, and the total time `T` is set to 20, so we will have 200 time steps. We can then set the transcription `rates` at different phases within the 200 time steps. The scheduler function will use these rates as input, and return the time steps when the transcription happens by a Poisson process model.
 ```python
 # set the total time and transcription rates for each interval
 T = 20
@@ -55,7 +55,7 @@ rates = [10]*30 + [0]*70 + [10]*100
 schedule = scheduler(T, rates, 0.1)
 ```
 
-Now that we have the transcription schedule, we can start to generate snythetic data. For each sample, we create a Cell object, and simulate the transcription and drift-diffusion process based on the schedule (you can see this process in real time by uncommenting the plotcell function). The build_data function is used to convert the cells into feature vectors (num_dists defines the dimension of the feature vectors, see Figure. 1 in our paper for the definition of a feature vector). To save the data, we flatten each sample into a 1*(time_steps*dim_feature) vector, and append it to a list. You can then save the list to csv format for later usage.
+Now that we have the transcription `schedule`, we can start to generate snythetic data. For each sample, we create a [Cell](Simulation/simulator.py#L86-L155) object, and simulate the transcription and drift-diffusion process based on the schedule (you can see this process in real time by uncommenting the plotcell function). The [build_data](Simulation/simulator.py#L62-L72) function is used to convert the cells into feature vectors (`num_dists` defines the dimension of the feature vectors, see Figure. 1 in our paper for the definition of a feature vector). To save the data, we flatten each `sample` into a 1*(time_steps*dim_feature) vector, and append it to a list. You can then save the list to csv format for later usage.
 ```python
 # generate data
 num_samples = 200
@@ -73,7 +73,7 @@ for i in range(num_samples):
 ```
 
 ### 2. Training
-Please see the run_simu.ipynb notebook saved in Simulation for the whole process of modeling training and validation. Basically, this is what you need to do:
+Please see [this notebook](Simulation/run_simu.ipynb) for the whole process of modeling training and validation. Basically, this is what you need to do:
 - Set the hyper-parameters.
 - Load the data and start training.
 - Run the test function after training, and compare the inferred transcription rates with ground truth.
