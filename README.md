@@ -37,7 +37,7 @@ There is an example at the end of the jupyter notebook Simulation/simulate.ipynb
 
 Firstly we need to set the parameters of the cell (a cell is modeled as a sphere, so we need to set the center coordinates and radius) and the molecule movements (drift and diffusion components).
 
-```
+```python
 # set the hyper-parameters
 resolution = 0.1    # difference between two time steps
 center = (0, 0, 0)
@@ -47,7 +47,7 @@ brownian = 0.05
 ```
 
 To model the transcription process, we need to set the time steps when new molecules are generated, which is achieved by the scheduler function. Here the resolution has been set to 0.1 in the previous step, and the total time T is set to 20, so we will have 200 time steps. We can then set the transcription rates at different phases within the 200 time steps. The scheduler function will use these rates as input, and return the time steps when the transcription happens by a Poisson process model.
-```
+```python
 # set the total time and transcription rates for each interval
 T = 20
 rates = [10]*30 + [0]*70 + [10]*100 
@@ -56,7 +56,7 @@ schedule = scheduler(T, rates, 0.1)
 ```
 
 Now that we have the transcription schedule, we can start to generate snythetic data. For each sample, we create a Cell object, and simulate the transcription and drift-diffusion process based on the schedule (you can see this process in real time by uncommenting the plotcell function). The build_data function is used to convert the cells into feature vectors (num_dists defines the dimension of the feature vectors, see Figure. 1 in our paper for the definition of a feature vector). To save the data, we flatten each sample into a 1*(time_steps*dim_feature) vector, and append it to a list. You can then save the list to csv format for later usage.
-```
+```python
 # generate data
 num_samples = 200
 num_dists = 50
