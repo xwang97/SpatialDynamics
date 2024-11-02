@@ -3,10 +3,17 @@ from sklearn.neighbors import NearestNeighbors
 import numpy as np
 from scipy import stats
 from tqdm import tqdm
+from collections import defaultdict
 
 def read_trans(filename):
     transcripts = pd.read_csv(filename)
+    transcripts['cell_id'] = transcripts['cell_id'].astype(int)
     return transcripts
+
+def read_labels(filename, sheet):
+    labels = pd.read_excel(filename, sheet_name=sheet)
+    labels.rename(columns={'Barcode': 'cell_id', 'Cluster': 'label'}, inplace=True)
+    return labels
 
 def pair_ks(base, neighbor):
     """
@@ -37,8 +44,9 @@ def pair_ks(base, neighbor):
     return min(ks_list)
 
 class TimeSeriesBuilder:
-    def __init__(self, transcripts):
+    def __init__(self, transcripts, cell_types):
         self.transcripts = transcripts  # transcripts matrix
+        self.cell_types = cell_types    # cell types
         self.cell_dists = {}  # key: cell_id, value: a list of molecule distances
         self.cell_centers = {} # key: cell_id, value: a list containing x and y of the center
         self.cell_neighbors = {} # key: cell_id, value: a list contianing the cell's k neareast neighbors
@@ -55,6 +63,7 @@ class TimeSeriesBuilder:
             cell_centers: dict, key is cell_id, value is a list of molecule coordinates
         """
         print("Building cell dictionaries")
+        # build cell_dists and cell_centers
         for index, row in self.transcripts.iterrows():
             if row['cell_id'] not in self.cell_dists:
                 self.cell_dists[row['cell_id']] = [row['distance']]
@@ -64,6 +73,16 @@ class TimeSeriesBuilder:
         # filter out cells with less than 5 molecules
         self.cell_dists = {key: value for key, value in self.cell_dists.items() if len(value) >= 5}
         self.cell_centers = {key: value for key, value in self.cell_centers.items() if key in self.cell_dists}
+
+        # filter out cell_types with less than 50 cells
+        cell_ids = self.cell_dists.keys()
+        self.cell_types = self.cell_types[self.cell_types['cell_id'].isin(cell_ids)]
+        self.transcripts = self.transcripts[self.transcripts['cell_id'].isin(cell_ids)]
+        type_counts = self.cell_types['label'].value_counts()
+        self.cell_types = self.cell_types[self.cell_types['label'].isin(type_counts[type_counts >= 50].index)]
+        kept_cell_ids = self.cell_types['cell_id'].values
+        self.cell_dists = {key: value for key, value in self.cell_dists.items() if key in kept_cell_ids}
+        self.cell_centers = {key: value for key, value in self.cell_centers.items() if key in kept_cell_ids}
     
     def find_neighbors(self, k_neighbors=20):
         """
@@ -76,14 +95,24 @@ class TimeSeriesBuilder:
             of that cell's neighbors
         """
         print("Find spatial neighbors")
-        coordinates_to_ids = {tuple(coord): cell_id for cell_id, coord in self.cell_centers.items()}
-        cell_coordinates = np.array(list(self.cell_centers.values()))
-        nbrs = NearestNeighbors(n_neighbors=k_neighbors+1, algorithm='auto').fit(cell_coordinates)
-        distances, indices = nbrs.kneighbors(cell_coordinates)
-        for cell_id, neighbor_indices in zip(self.cell_centers.keys(), indices):
-            neighbors = [neighbor_id for neighbor_id in neighbor_indices if neighbor_id != cell_id]
-            neighbor_ids = [coordinates_to_ids[tuple(cell_coordinates[neighbor_id])] for neighbor_id in neighbors]
-            self.cell_neighbors[cell_id] = neighbor_ids[1:]
+        # 1. Organize cells by type
+        cell_types = self.cell_types.set_index('cell_id')['label'].to_dict() # key: cell_id, value: cell type
+        type_cell_ids = defaultdict(list)
+        type_cell_coords = defaultdict(list)
+        for cell_id, coord in self.cell_centers.items():
+            cell_type = cell_types[cell_id]
+            type_cell_ids[cell_type].append(cell_id)
+            type_cell_coords[cell_type].append(coord)
+        
+        # 2. Fit a NearestNeighbor model for each cell type
+        for cell_type, cell_coords in type_cell_coords.items():
+            cell_coords = np.array(cell_coords)
+            cell_ids = type_cell_ids[cell_type]
+            nbrs = NearestNeighbors(n_neighbors=k_neighbors+1, algorithm='auto').fit(cell_coords)
+            distances, indices = nbrs.kneighbors(cell_coords)
+            for cell_id, neighbor_indices in zip(cell_ids, indices):
+                neighbor_cell_ids = [cell_ids[i] for i in neighbor_indices]
+                self.cell_neighbors[cell_id] = neighbor_cell_ids[1:]
     
     def build_features(self, stride=3):
         """
@@ -230,5 +259,5 @@ class TimeSeriesBuilder:
             np.savetxt(save_path+gene+'_data.csv', data, delimiter=',')
             np.savetxt(save_path+gene+'_locs.csv', locations, delimiter=',')
             np.savetxt(save_path+gene+'_reference.csv', reference_index, delimiter=',')
-        print(f"{num_samples} time-series samples generated")
+        print(f"{num_samples} time-series samples of {gene} generated")
 
