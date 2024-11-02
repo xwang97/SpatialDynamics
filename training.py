@@ -40,12 +40,12 @@ def train(data, locs, batch_size, base_lr, lr_step, num_epochs, hidden_size, lat
             loss_recon = mse(data[:, 1:, 0], prediction[:, :, 0])*weights[0]
             for dim in range(1, feature_dim):
                 loss_recon += mse(data[:, 1:, dim], prediction[:, :, dim])*weights[dim]
-            # loss_recon /= feature_dim
+            loss_recon /= feature_dim
             loss_var = mse(totals_pre[:, 1:], totals_post[:, :-1])
             loss_status = torch.mean(trans_status)
             loss_smooth = smoothness_loss(generation) + smoothness_loss(trans_status)
 
-            loss = loss_recon + 0.4*loss_smooth + 0.0*loss_status    # best for simulation
+            loss = loss_recon + 0.05*loss_smooth + 0.3*loss_status    
 
             recon += loss_recon.cpu()
             variation += loss_var.cpu()
@@ -68,6 +68,7 @@ def test(sample, loc, net):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # test
     net.eval()
+    net = net.to(device)
     sample = torch.from_numpy(sample).float().to(device)
     loc = torch.from_numpy(loc).float().to(device)
     prediction, generation, trans_status, _, _ = net(sample, loc)

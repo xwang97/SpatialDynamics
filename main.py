@@ -43,7 +43,7 @@ if __name__ == '__main__':
     data, locs = read_data(args.data_path, args.locs_path, args.seq_len, args.dim_features)
     train_data = data
     train_locs = locs
-    net = train(train_data, train_locs, batch_size, base_lr, lr_step, num_epochs)
+    net = train(train_data, train_locs, batch_size, base_lr, lr_step, num_epochs, hidden_size, latent_size, SEQ_LEN)
     # save the trained model
     gene = os.path.basename(args.data_path).split('_')[0]
     torch.save(net.state_dict(), args.save_model_path + gene + '_model.pth')
