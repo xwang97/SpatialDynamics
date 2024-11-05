@@ -130,7 +130,7 @@ class TimeSeriesBuilder:
         for id, dists in self.cell_dists.items():
             self.cell_features[id] = np.zeros(num_strides)
             for d in dists:
-                j = int(d / stride)
+                j = min(9, int(d / stride))
                 self.cell_features[id][j] += 1
     
     def cal_probs(self, alpha=2):
@@ -243,9 +243,12 @@ class TimeSeriesBuilder:
     
     def run(self, num_samples, save_path, gene, method='base', reference_ids = None):
         """
-        RUn the functions above, and save the time series samples.
+        Run the functions above, and save the time series samples.
         """
         self.build_dict()
+        if len(self.cell_dists) < 100:
+            print(f"Less than 100 cells for {gene}, skip")
+            return
         self.find_neighbors()
         self.build_features()
         self.cal_probs()
