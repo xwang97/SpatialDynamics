@@ -32,7 +32,7 @@ def read_data(file1, file2, SEQ_LEN, dim_inputs):
     if file2 is not None:
         df = pd.read_csv(file2)
         locations = df.values
-        print(data.shape)
+        # print(data.shape)
         return data, locations
     else:
         return data
@@ -79,3 +79,38 @@ def set_seed(seed):
     random.seed(seed)
     torch.backends.cudnn.deterministic = True  # Ensures deterministic algorithms
     torch.backends.cudnn.benchmark = False     # Disables some optimizations for reproducibility
+
+
+def visulize_cell(cell):
+    # visulize how the spatial distribution of molecules changes over time
+    time_steps = cell.shape[0]  # Number of time steps 
+    fig, axes = plt.subplots(1, time_steps, figsize=(5 * time_steps, 5))  # 1 row, N columns
+
+    for time_step, row in enumerate(cell):
+        x_coords = []
+        y_coords = []
+        
+        for distance, molecule_count in enumerate(row):
+            # Generate coordinates for each molecule at this distance
+            angles = np.random.uniform(0, 2 * np.pi, int(molecule_count))
+            r = (distance + 0.1)*3  # Distances are indexed from 0, shift by 1 to avoid r=0
+            
+            x = r * np.cos(angles)
+            y = r * np.sin(angles)
+            
+            x_coords.extend(x)
+            y_coords.extend(y)
+        
+        # Plot on the corresponding subplot
+        ax = axes[time_step]
+        ax.scatter(x_coords, y_coords, alpha=0.6)
+        ax.scatter(0, 0, color='red', s=100, marker='o')  # Add red center point
+        ax.set_title(f'Time Step {time_step + 1}')
+        ax.set_xlabel('X Position')
+        ax.set_ylabel('Y Position')
+        ax.set_xlim(-10, 10)
+        ax.set_ylim(-10, 10)
+        ax.set_aspect('equal', adjustable='box')  # Keep aspect ratio square
+
+    plt.tight_layout()  # Adjusts spacing between subplots for clarity
+    plt.show()
