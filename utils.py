@@ -4,6 +4,7 @@ import torch
 from torch.utils.data import Dataset
 import matplotlib.pyplot as plt
 import random
+from models import Model
 
 
 class MyDataset(Dataset):

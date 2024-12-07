@@ -248,11 +248,11 @@ class TimeSeriesBuilder:
         self.build_dict()
         if len(self.cell_dists) < 100:
             print(f"Less than 100 cells for {gene}, skip")
-            return
-        self.find_neighbors()
-        self.build_features()
-        self.cal_probs()
+            return        
+        self.build_features()        
         if method == 'base':
+            self.find_neighbors()
+            self.cal_probs()
             data, locations, cell_ids = self.build_dataset_base(num_samples)
             np.savetxt(save_path+gene+'_data.csv', data, delimiter=',')
             np.savetxt(save_path+gene+'_locs.csv', locations, delimiter=',')

@@ -55,9 +55,10 @@ plot_data <- data.frame(
 plot_data$Scenario <- paste("Pattern", 1:nrow(plot_data))
 pdf('../Simulation/figures/rate_mse.pdf')
 ggplot(plot_data, aes(x = Scenario, y = Mean_MSE)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.8) +
   geom_errorbar(aes(ymin = Mean_MSE - sqrt(Variance), ymax = Mean_MSE + sqrt(Variance)), 
                 width = 0.2) +
+  scale_x_discrete(expand = c(0.01, 0)) +  # Reduce padding around bars
   labs(x = "Scenario", y = "MSE", title = "") +
   theme_bw() +
   theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
@@ -92,9 +93,10 @@ plot_data_status <- data.frame(
 plot_data_status$Scenario <- paste("Pattern", 1:nrow(plot_data_status))
 pdf('../Simulation/figures/status_acc.pdf')
 ggplot(plot_data_status, aes(x = Scenario, y = Mean_Accuracy)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.8) +
   geom_errorbar(aes(ymin = Mean_Accuracy - sqrt(Variance), ymax = Mean_Accuracy + sqrt(Variance)), 
                 width = 0.2) +
+  scale_x_discrete(expand = c(0.01, 0)) +  # Reduce padding around bars
   labs(x = "Scenario", y = "Accuracy", title = "") +
   theme_minimal() +
   theme_bw() +
