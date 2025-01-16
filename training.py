@@ -53,7 +53,7 @@ def train(data, locs, batch_size, base_lr, lr_step, num_epochs, hidden_size, lat
             loss_status = torch.mean(trans_status)
             loss_smooth = smoothness_loss(generation) + smoothness_loss(trans_status)
 
-            loss = loss_recon + 0.2*loss_smooth + 0.03*loss_status    
+            loss = loss_recon + 0.0*loss_smooth + 0.001*loss_status    
 
             recon += loss_recon.cpu()
             variation += loss_var.cpu()
