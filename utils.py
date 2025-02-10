@@ -115,3 +115,18 @@ def visulize_cell(cell):
 
     plt.tight_layout()  # Adjusts spacing between subplots for clarity
     plt.show()
+
+
+def heuristic_alpha(file):
+    """
+    Heuristic way to determine the alpha parameter (weight of the status loss) for the training.
+    Input: 
+        file: the path to the csv file containing the molecules per gene data
+    Output:
+        alpha: the hyperparameter for the status loss
+    """
+    trans = pd.read_csv(file)
+    grouped_trans_sizes = trans.groupby('cell_id').size()
+    avg = grouped_trans_sizes.mean()
+    alpha = avg / 50
+    return alpha

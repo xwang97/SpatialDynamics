@@ -46,6 +46,7 @@ class Model(nn.Module):
         self.seq_len = seq_len
 
         self.rnn_cell = nn.LSTMCell(dim_inputs, self.hidden_size)
+        self.ln_h = nn.LayerNorm(hidden_size)
         self.fc_mu = nn.Linear(hidden_size, latent_size)  # next step mean distance of the existing molecules
         self.fc_var = nn.Linear(hidden_size, latent_size) # next step log variance of the existing melocules
         self.velo = nn.Linear(hidden_size, latent_size)   # latent generation rate at center
@@ -60,6 +61,7 @@ class Model(nn.Module):
         )
         self.next_state = nn.Linear(latent_size, dim_inputs) # predict state of the next step
         self.location_embedding = nn.Linear(2, self.hidden_size) # embedding of the physical location
+        self.ln_loc = nn.LayerNorm(2)
     
     def reparameterize(self, mu, logvar):
         """
@@ -74,6 +76,7 @@ class Model(nn.Module):
     
     def encode(self, input, h, c):
         h, c = self.rnn_cell(input, (h, c))
+        # h = self.ln_h(h)        # layer normalization
         mu = self.fc_mu(h)
         logvar = self.fc_var(h)
         velo = self.velo(h)
@@ -99,7 +102,8 @@ class Model(nn.Module):
     
     def forward(self, data, locs):
         # h = Variable(torch.zeros((data.size()[0], self.hidden_size)))
-        h = self.location_embedding(locs).to(device)
+        locs = self.ln_loc(locs)
+        h = self.location_embedding(locs).to(device) 
         c = Variable(torch.zeros((data.size()[0], self.hidden_size))).to(device)
         states = []
         generations = []

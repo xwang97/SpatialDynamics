@@ -7,7 +7,7 @@ import math
 from tqdm import tqdm
 
 
-def train(data, locs, batch_size, base_lr, lr_step, num_epochs, hidden_size, latent_size, seq_len, val_data=None, val_locs=None):
+def train(data, locs, alpha, batch_size, base_lr, lr_step, num_epochs, hidden_size, latent_size, seq_len, val_data=None, val_locs=None):
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # make data loader
@@ -53,7 +53,7 @@ def train(data, locs, batch_size, base_lr, lr_step, num_epochs, hidden_size, lat
             loss_status = torch.mean(trans_status)
             loss_smooth = smoothness_loss(generation) + smoothness_loss(trans_status)
 
-            loss = loss_recon + 0.0*loss_smooth + 0.001*loss_status    
+            loss = loss_recon + 0.0*loss_smooth + alpha*loss_status    
 
             recon += loss_recon.cpu()
             variation += loss_var.cpu()

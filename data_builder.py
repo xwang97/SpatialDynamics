@@ -179,7 +179,7 @@ class TimeSeriesBuilder:
             id = next_cell_id             # jump to the next cell
         return series, selected_ids
     
-    def build_dataset_base(self, num_samples, seq_len=20):
+    def build_dataset_base(self, num_samples, seq_len=10):
         """
         Build a dataset by random walk
         Input:
@@ -191,7 +191,7 @@ class TimeSeriesBuilder:
             cell_ids: num_samples * seq_len matrix, each row is the cell_ids of a local series
         """
         print("Start building the dataset")
-        data = []
+        data = [] 
         locations = []
         cell_ids = []  # save the cell ids of each path
         # all_ids = np.unique(transcripts['cell_id'])
