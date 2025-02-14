@@ -5,6 +5,7 @@ from torch.utils.data import Dataset
 import matplotlib.pyplot as plt
 import random
 from models import Model
+from statsmodels.tsa.stattools import grangercausalitytests
 
 
 class MyDataset(Dataset):
@@ -130,3 +131,49 @@ def heuristic_alpha(file):
     avg = grouped_trans_sizes.mean()
     alpha = avg / 50
     return alpha
+
+def heuristic_alpha2(data):
+    """
+    Heuristic way to determine the alpha parameter (weight of the status loss) for the training.
+    Input: 
+        file: the path to the csv file containing the training samples
+    Output:
+        alpha: the hyperparameter for the status loss
+    """
+    sum_per_cell = data.sum(axis=-1)
+    alpha = np.median(sum_per_cell) / 100
+    return alpha
+
+def granger_causality(velos, maxlag=2):
+    """
+    Run granger causality test on the velocity data.
+    Input:
+        velos: a dataframe containing the velocity data, first half of the columns are transcription rates of the 
+        tf, second half are the transcription rates of the target gene.
+        maxlag: the maximum lag to test
+    Output:
+        pvalues: a list of pvalues for the granger causality test of the input samples
+        random_pvalues: a list of pvalues for the granger test of the randomly shuffled samples
+    """
+    pvalues = []
+    random_pvalues = []
+    for index, row in velos.iterrows():
+        data = row.values
+        sample1 = data[:len(data)//2]
+        sample2 = data[len(data)//2:]
+        if len(np.unique(sample1)) <= 3 or len(np.unique(sample2)) <= 3:
+            pvalues.append(None)
+            random_pvalues.append(None)
+            continue
+        sample1 += np.random.normal(0, 1e-6, len(sample1))  # add a small noise to avoid the error of granger test
+        sample2 += np.random.normal(0, 1e-6, len(sample2))
+        results = grangercausalitytests(np.column_stack((sample1, sample2)), maxlag=maxlag, verbose=False)
+        pvalue = results[2][0]['lrtest'][1]
+        pvalues.append(pvalue)
+
+        np.random.shuffle(sample1)
+        np.random.shuffle(sample2)
+        results = grangercausalitytests(np.column_stack((sample1, sample2)), maxlag=maxlag, verbose=False)
+        pvalue = results[2][0]['lrtest'][1]
+        random_pvalues.append(pvalue)
+    return pvalues, random_pvalues

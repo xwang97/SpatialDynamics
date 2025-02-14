@@ -95,7 +95,7 @@ for (subfolder in subfolders) {
     velo_data <- read.csv(velo_file, header = FALSE)
     if (nrow(velo_data) < 10) next
     # Check if the velo_base of the first ten rows are all zero
-    skip_file <- all(rowSums(velo_data[1:10, 1:(ncol(velo_data) / 2)]) == 0)
+    skip_file <- all(rowSums(velo_data[1:10, 1:(ncol(velo_data) / 2)]) == 0) || all(rowSums(velo_data[1:10, (ncol(velo_data)/2+1):ncol(velo_data)]) == 0)
     if (skip_file) next
     
     # Initialize a vector to store scores for this subfolder
@@ -109,7 +109,7 @@ for (subfolder in subfolders) {
       velo <- row[(mid + 1):length(row)]
       # Apply filtering criteria
       if ((sum(velo != 0) > (length(velo) / 2)) && (sum(velo_base != 0) > (length(velo_base) / 2))) {
-        score <- grangertest(velo_base, velo, order = 3)[2, 3]
+        score <- grangertest(velo_base, velo, order = 2)[2, 3]
         granger_scores <- c(granger_scores, score)
       }
       else{
@@ -127,13 +127,13 @@ for (subfolder in subfolders) {
 # Simulate the random scenario
 set.seed(123)  # For reproducibility
 random_granger_scores <- c()
-for (i in 1:10000) {  # Simulate 100 random pairs
+for (i in 1:2000) {  # Simulate 100 random pairs
   # Generate random velo_base and velo vectors
-  velo_base <- rnorm(20, mean = 0, sd = 1)  # Random normal distribution
-  velo <- rnorm(20, mean = 2, sd = 1)
+  velo_base <- rnorm(10, mean = 0, sd = 1)  # Random normal distribution
+  velo <- rnorm(10, mean = 2, sd = 1)
   
   # Compute Granger test
-  score <- grangertest(velo_base, velo, order = 3)[2, 3]
+  score <- grangertest(velo_base, velo, order = 2)[2, 3]
   random_granger_scores <- c(random_granger_scores, score)
 }
 # Add the random scenario to the data list
@@ -142,11 +142,11 @@ granger_scores_by_folder[["Random"]] <- random_granger_scores
 # Simulate the delayed scenario
 set.seed(789)  # For reproducibility
 delayed_granger_scores <- c()
-for (i in 1:10000) {  # Simulate 100 delayed pairs
+for (i in 1:2000) {  # Simulate 100 delayed pairs
   # Generate velo_base with larger variance
-  velo_base <- rnorm(20, mean = 0, sd = 1)  # Larger variance (sd = 1)
+  velo_base <- rnorm(10, mean = 0, sd = 1)  # Larger variance (sd = 1)
   # Add noise to velo_base
-  noise <- rnorm(20, mean = 0, sd = 0.5)   # Noise with larger variance
+  noise <- rnorm(10, mean = 0, sd = 0.5)   # Noise with larger variance
   velo_base_disturbed <- velo_base + noise  # Disturbed version of velo_base
   # Create velo with a lag of 3 and noise
   velo <- 3 * velo_base_disturbed[1:17] + rnorm(17, mean = 0, sd = 0.5)  # Linear delayed relationship with noise
@@ -158,7 +158,7 @@ for (i in 1:10000) {  # Simulate 100 delayed pairs
   
   # Check for sufficient variance
   if (var(velo_base) > 1e-6 && var(velo) > 1e-6) {
-    score <- grangertest(velo_base, velo, order = 3)[2, 3]
+    score <- grangertest(velo_base, velo, order = 2)[2, 3]
     delayed_granger_scores <- c(delayed_granger_scores, score)
   }
 }
@@ -239,7 +239,7 @@ df <- df[!is.na(df$velocity), ]
 # df <- df[-which.max(df$velocity), ]
 
 ggplot(df, aes(a, -b))+
-  geom_point(aes(color=amp))+
+  geom_point(aes(color=velocity))+
   scale_colour_gradientn("velocity",
                          colours=rev(brewer.pal(8,"Spectral")),
                          breaks=seq(0, 50, length.out=8))+
