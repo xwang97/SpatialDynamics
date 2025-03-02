@@ -4,14 +4,18 @@ import numpy as np
 from scipy import stats
 from tqdm import tqdm
 from collections import defaultdict
+import os
 
 def read_trans(filename):
     transcripts = pd.read_csv(filename)
-    transcripts['cell_id'] = transcripts['cell_id'].astype(int)
+    transcripts['cell_id'] = transcripts['cell_id']
     return transcripts
 
-def read_labels(filename, sheet):
-    labels = pd.read_excel(filename, sheet_name=sheet)
+def read_labels(filename, sheet=None):
+    if sheet is not None:
+        labels = pd.read_excel(filename, sheet_name=sheet)
+    else:
+        labels = pd.read_csv(filename)
     labels.rename(columns={'Barcode': 'cell_id', 'Cluster': 'label'}, inplace=True)
     return labels
 
@@ -167,7 +171,7 @@ class TimeSeriesBuilder:
             selected_ids: a vector, each element is a cell_id of this series
         """
         series = np.zeros((length, dim_features), dtype=float)
-        selected_ids = np.zeros(length)
+        selected_ids = [0] * length
         id = start
         for i in range(length):
             series[i] = self.cell_features[id] # save the features
@@ -250,13 +254,15 @@ class TimeSeriesBuilder:
             print(f"Less than 100 cells for {gene}, skip")
             return        
         self.build_features()        
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
         if method == 'base':
             self.find_neighbors()
             self.cal_probs()
             data, locations, cell_ids = self.build_dataset_base(num_samples)
             np.savetxt(save_path+gene+'_data.csv', data, delimiter=',')
             np.savetxt(save_path+gene+'_locs.csv', locations, delimiter=',')
-            np.savetxt(save_path+gene+'_ids.csv', cell_ids, delimiter=',')
+            np.savetxt(save_path+gene+'_ids.csv', cell_ids, delimiter=',', fmt='%s')
         else:
             data, locations, reference_index = self.build_dataset_refer(reference_ids)
             np.savetxt(save_path+gene+'_data.csv', data, delimiter=',')

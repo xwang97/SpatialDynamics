@@ -97,3 +97,24 @@ The preprocessing is includes the following steps:
 - **Filtering**. Remove the transcripts with low qualities (qv score less than 20); remove the transcripts of controlled code words (not in the gene list); remove transcripts that are not assigned to any cells.
 - **Compute distance**. For each transcript, check the assigned cell_id and find out the centroid coordinates of that cell in cells.csv. Compute the relative locations of the transcript compared to the centroids, and then compute the distance.
 - **Saving**. Once finished, a new parquet file named as **transcripts_processed.parquet** will be saved to the current folder. Meanwhile, a new folder named **MoleculesPerGene** will be created, and the transcripts of each gene will be saved as a single csv file in this folder.
+
+### 2. Generate training sets for single genes
+For each single gene, we need to build a set of pseudo-time-series samples so that we can train the model and do some downstream analysis. The following code provides an automatic way to run this for all the genes. Before running this, make sure to extract the clusters.csv file to your data folder (you can find it in analysis.tar.gz, graph-based clustering results is recommended).
+```python
+# load transcripts and cell types
+folder = '/path_to_your_data_folder/'
+save_path = folder + 'TimeSeries/'
+# cell_types = read_labels(filename=folder + 'Cell_Barcode_Type_Matrices.xlsx', sheet='Xenium R1 Fig1-5 (supervised)')
+cell_types = read_labels(filename=folder + 'clusters.csv')
+gene_list = sorted([f[:-4] for f in os.listdir(folder+'MoleculesPerGene') if f.endswith('.csv')])
+for i in range(len(gene_list)):
+    gene = gene_list[i]
+    clear_output(wait=True)
+    print(f'Processing the {i+1}-th gene: {gene}')
+    transcripts = read_trans(folder + 'MoleculesPerGene/' + gene + '.csv')
+    num_cells = transcripts['cell_id'].nunique()
+    # Build time series
+    tsb = TimeSeriesBuilder(transcripts, cell_types)
+    tsb.run(num_samples=int(num_cells/10), save_path=save_path, gene=gene)
+```
+After this step, a new folder named **TimeSeries** will be created in your data folder. For each gene, three csv files will be save in this new folder: gene_data.csv contains the feature vectors of the generated time-series samples, gene_ids.csv contains the cell_ids in each sample, gene_locs.csv are the spatial coordinates of the cells.
