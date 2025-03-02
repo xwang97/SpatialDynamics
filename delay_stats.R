@@ -39,7 +39,7 @@ ggplot(data.frame(scores = granger_scores), aes(x = "", y = scores)) +
 tf_info <- MsigDB_gene_sets_v6[[11]]
 all_tfs <- names(tf_info)
 # Define folders
-data_folder <- '../Xenium/BreastS1R1/TimeSeries/'
+data_folder <- '../Xenium/HumanBoneMarrow/TimeSeries/'
 
 # Fetch the list of genes
 file_list <- list.files(data_folder, pattern = "\\.csv$", full.names = FALSE)
@@ -70,7 +70,7 @@ for (tf in names(filtered_tf_info)) {
     pairs_df <- rbind(pairs_df, tf_gene_pairs)
   }
 }
-write.csv(pairs_df, "../Xenium/BreastS1R1/tf_gene_pairs.csv", row.names = FALSE)
+write.csv(pairs_df, "../Xenium/HumanBoneMarrow/tf_gene_pairs.csv", row.names = FALSE)
 
 
 
