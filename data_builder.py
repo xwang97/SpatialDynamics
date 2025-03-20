@@ -230,18 +230,20 @@ class TimeSeriesBuilder:
         seq_len = cell_ids.shape[1]
         for i in range(num_samples):
             series = np.zeros((seq_len, dim_features), dtype=float)
-            save = 1
-            if cell_ids[i, 0] not in all_ids:
-                save = 0
-            else:
-                for j in range(seq_len):
-                    if cell_ids[i ,j] in all_ids:
-                        series[j] = self.cell_features[cell_ids[i, j]]
-                    else:
-                        continue
-            if save:
+            count = 0
+            loc_id = 0
+            for j in range(seq_len):
+                if cell_ids[i ,j] in all_ids:
+                    series[j] = self.cell_features[cell_ids[i, j]]
+                    if count == 0:
+                        loc_id = cell_ids[i, j]
+                    count += 1
+                else:
+                    continue
+            if count > 0:
                 data.append(series.flatten())
-                locations.append(self.cell_centers[cell_ids[i, 0]])
+                # locations.append(self.cell_centers[cell_ids[i, 0]])
+                locations.append(self.cell_centers[loc_id])
                 reference_index.append(i)
         return np.array(data), np.array(locations), np.array(reference_index)
     
