@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import random
 from models import Model
 from statsmodels.tsa.stattools import grangercausalitytests
+# from training import test
 
 
 class MyDataset(Dataset):
@@ -143,6 +144,22 @@ def heuristic_alpha2(data):
     sum_per_cell = data.sum(axis=-1)
     alpha = np.median(sum_per_cell) / 100
     return alpha
+
+def easy_test(data_folder, model_folder, gene, SEQ_LEN, dim_inputs, hidden_size, latent_size):
+    from training import test
+    # load test data
+    data_path = data_folder + gene + '_data.csv'
+    locs_path = data_folder + gene + '_locs.csv'
+    data, locs = read_data(data_path, locs_path, SEQ_LEN, dim_inputs)
+    test_data = data
+    test_locs = locs
+    # load the trained model and start test
+    model_path = model_folder + gene + '_model.pth'
+    net = Model(dim_inputs, hidden_size, latent_size, SEQ_LEN)
+    net.load_state_dict(torch.load(model_path))
+    with torch.no_grad():
+        prediction, generation, trans_status, loss_recon = test(test_data, test_locs, net)
+    return prediction, generation, trans_status, loss_recon
 
 def granger_causality(velos, maxlag=2):
     """
