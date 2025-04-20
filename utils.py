@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np 
+import os
 import torch
 from torch.utils.data import Dataset
 import matplotlib.pyplot as plt
@@ -194,3 +195,43 @@ def granger_causality(velos, maxlag=2):
         pvalue = results[2][0]['lrtest'][1]
         random_pvalues.append(pvalue)
     return pvalues, random_pvalues
+
+def get_velo_intervals(root_dir, time_points, gene):
+    """
+    For a given gene, find the max velo among all the time points, and split 0-max into several groups.
+    """
+    max_velo = 0
+    for time_point in time_points:
+        velos_file = os.path.join(root_dir, time_point, 'velos', f"{gene}_velos.csv")
+        if not os.path.exists(velos_file):
+            continue
+        velos_df = pd.read_csv(velos_file, header=None)
+        temp = velos_df.max().max()
+        max_velo = max(max_velo, temp)
+    # split the max_velo into several intervals
+    low = [0, max_velo/3]
+    med = [max_velo/3, 2*max_velo/3]
+    high = [2*max_velo/3, max_velo]
+    groups = [low, med, high]
+    return groups
+
+def get_group_components(velos, groups):
+    """
+    For a given velos file, find the percentage of cells (rows) that fall into each group.
+    The mean velo of each cell will be use to determine the group.
+    """
+    low, med, high = groups
+    low_count, med_count, high_count = 0, 0, 0
+    total_count = len(velos)
+    for index, row in velos.iterrows():
+        mean_velo = row.mean()
+        if low[0] <= mean_velo < low[1]:
+            low_count += 1
+        elif med[0] <= mean_velo < med[1]:
+            med_count += 1
+        elif high[0] <= mean_velo < high[1]:
+            high_count += 1
+    low_ratio = low_count / total_count
+    med_ratio = med_count / total_count
+    high_ratio = high_count / total_count
+    return [low_ratio, med_ratio, high_ratio]
