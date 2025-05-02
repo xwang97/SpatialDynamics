@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import random
 from models import Model
 from statsmodels.tsa.stattools import grangercausalitytests
+from collections import defaultdict
+import glob
 # from training import test
 
 
@@ -235,3 +237,60 @@ def get_group_components(velos, groups):
     med_ratio = med_count / total_count
     high_ratio = high_count / total_count
     return [low_ratio, med_ratio, high_ratio]
+
+def classify_cell_stage(df_cell, distance_threshold):
+    """
+    Classify whether a cell is in beginning or ending stage based on distance to center.
+
+    Args:
+        df_cell: Subset of dataframe for a single cell.
+        distance_threshold: Threshold distance to define "inner" molecules.
+
+    Returns:
+        "beginning", "ending", or "intermediate"
+    """
+    total = len(df_cell)
+    if total == 0:
+        return None
+
+    inner_fraction = (df_cell["distance"] < distance_threshold).sum() / total
+
+    if inner_fraction >= 0.5:
+        return "beginning"
+    elif inner_fraction <= 0.2:
+        return "ending"
+    else:
+        return "intermediate"
+
+def get_stage_percentages(csv_path, distance_threshold=5.0, min_molecules=10):
+    """
+    Given a CSV of molecules for one gene at one time point, return stage percentages.
+
+    Args:
+        csv_path (str): Path to the CSV file.
+        distance_threshold (float): Threshold to define "inner" region.
+
+    Returns:
+        dict: {stage: percentage of cells} e.g., {"beginning": 40.0, "intermediate": 30.0, "ending": 30.0}
+    """
+    df = pd.read_csv(csv_path)
+    df = df.dropna(subset=["cell_id", "distance"])
+
+    stage_counts = {"beginning": 0, "intermediate": 0, "ending": 0}
+    total_cells = 0
+
+    for cell_id, df_cell in df.groupby("cell_id"):
+        # if len(df_cell) < min_molecules:
+        #     continue  # skip low-coverage cells
+        if len(df_cell) < 3 or len(df_cell) > 10:
+            continue
+        stage = classify_cell_stage(df_cell, distance_threshold)
+        if stage:
+            stage_counts[stage] += 1
+            total_cells += 1
+
+    if total_cells == 0:
+        return {stage: 0.0 for stage in stage_counts}
+
+    return {stage: count / total_cells for stage, count in stage_counts.items()}
+
